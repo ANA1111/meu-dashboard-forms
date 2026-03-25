@@ -46,19 +46,15 @@ try:
         st.header("🔍 Filtros")
         st.markdown("Refine sua busca abaixo:")
         
-        # Busca inteligente pelas colunas específicas
         coluna_cidade = next((col for col in df.columns if "cidade" in col.lower()), None)
-        # Procura "mei" mas ignora a coluna de "cnpj" para pegar a pergunta de "Possui MEI"
         coluna_mei = next((col for col in df.columns if "mei" in col.lower() and "cnpj" not in col.lower()), None) 
         
-        # Cria apenas o Filtro de Cidade
         if coluna_cidade:
             valores_cidade = sorted(df[coluna_cidade].dropna().unique().tolist())
             selecao_cidade = st.multiselect(f"📍 {coluna_cidade}", valores_cidade)
             if selecao_cidade:
                 df_filtrado = df_filtrado[df_filtrado[coluna_cidade].isin(selecao_cidade)]
                 
-        # Cria apenas o Filtro de Possui MEI
         if coluna_mei:
             valores_mei = sorted(df[coluna_mei].dropna().unique().tolist())
             selecao_mei = st.multiselect(f"🏢 {coluna_mei}", valores_mei)
@@ -135,23 +131,35 @@ try:
     # ==========================================
     with aba_dados:
         st.markdown("#### 📋 Cadastros Principais")
-        st.markdown("Visualização rápida dos dados de identificação e localização.")
+        st.markdown("Visualização rápida dos dados de identificação, localização e contato.")
         
-        termos_desejados = ["nome", "mei", "cnpj", "cidade", "bairro"]
+        # 1. O que eu QUERO que apareça:
+        termos_desejados = ["nome", "mei", "cnpj", "cidade", "bairro", "telefone", "whatsapp", "whats", "recado"]
+        
+        # 2. O que eu NÃO QUERO que apareça de jeito nenhum:
+        termos_proibidos = ["mãe", "mae", "pai"]
+        
         colunas_encontradas = []
         for coluna in df_filtrado.columns:
-            for termo in termos_desejados:
-                if termo in coluna.lower() and coluna not in colunas_encontradas:
-                    colunas_encontradas.append(coluna)
+            coluna_min = coluna.lower()
+            
+            # Verifica se tem alguma palavra proibida na coluna (ex: "nome da mãe")
+            tem_proibido = any(proibido in coluna_min for proibido in termos_proibidos)
+            
+            # Se não tiver palavra proibida, ele vê se tem as palavras desejadas
+            if not tem_proibido:
+                for termo in termos_desejados:
+                    if termo in coluna_min and coluna not in colunas_encontradas:
+                        colunas_encontradas.append(coluna)
         
         if colunas_encontradas:
             st.dataframe(df_filtrado[colunas_encontradas], use_container_width=True, hide_index=True)
         else:
-            st.info("Colunas essenciais (Nome, MEI, CNPJ, Cidade, Bairro) não encontradas com esses nomes exatos.")
+            st.info("Colunas essenciais não encontradas com esses nomes exatos.")
 
         st.divider()
         
-        with st.expander("🔍 Ver Base de Dados Completa (Todas as colunas)"):
+        with st.expander("🔍 Ver Base de Dados Completa (Todas as colunas, incluindo nomes dos pais)"):
             st.dataframe(df_filtrado, use_container_width=True)
 
 except Exception as e:
